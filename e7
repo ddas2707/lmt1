@@ -12,6 +12,9 @@ date_columns = df.columns[11:]
 
 time_series = df[date_columns].sum(axis=0)
 
+time_series.index = pd.to_datetime(time_series.index)
+# time_series.index = pd.to_datetime(time_series.index, format="%m/%d/%y") if error occurs
+
 def plot_series(series, title="Time Series"):
     plt.figure(figsize=(12, 5))
     plt.plot(series, label="Total Cases")
@@ -54,6 +57,16 @@ model_fit = model.fit()
 print(model_fit.summary())
 
 forecast = model_fit.forecast(steps=30)
+
+def plot_forecast(series, forecast):
+    plt.figure(figsize=(12, 5))
+    plt.plot(series, label="Actual Cases")
+    plt.plot(pd.date_range(start=series.index[-1], periods=30, freq="D"), forecast, label="Forecast", color="red")
+    plt.title("COVID-19 Cases Forecast")
+    plt.xlabel("Date")
+    plt.ylabel("Total Cases")
+    plt.legend()
+    plt.show()
 
 plot_forecast(time_series, forecast)
 

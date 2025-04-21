@@ -20,7 +20,7 @@ plt.show()
 dbscan = DBSCAN(eps=0.5, min_samples=5)
 df["cluster"] = dbscan.fit_predict(df[["X", "Y"]])
 
-outliers_dbscan = df[df["cluster"] == -1]
+outliers_dbscan = df[df["cluster"] == -1]  #filtering outliers 
 
 plt.figure(figsize=(8, 6))
 sns.scatterplot(x=df["X"], y=df["Y"], hue=df["cluster"], palette="viridis", legend=False)
