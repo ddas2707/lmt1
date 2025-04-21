@@ -1,0 +1,16 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from scipy.stats import skew, kurtosis
+df = pd.read_csv('DATA-CLEANING-EXT2-DATASET.csv')
+
+print("Initial Data:")
+print(df.info())
+print(df.head(11))
+
+# Handling missing values
+num_imputer = SimpleImputer(strategy="mean")  # For numerical columns
+cat_imputer = SimpleImputer(strategy="most_frequent")  # For categorical columns
