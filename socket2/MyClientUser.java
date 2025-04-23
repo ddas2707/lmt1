@@ -29,3 +29,8 @@ public class MyClientUser {
         }
     }
 }
+
+// javac socket/MyServerUser.java
+// java socket.MyServerUser
+// javac socket/MyClientUser.java
+// java socket.MyClientUser
