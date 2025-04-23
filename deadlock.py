@@ -1,114 +1,90 @@
-class LamportClock:
-    def __init__(self, process_id):
-        self.process_id = process_id
-        self.clock = 0
+class Process:
+    def __init__(self, pid):
+        self.pid = pid
+        self.waiting_for = []
 
-    def send_request(self):
-        self.clock += 1
-        print(f"[Process {self.process_id}] Sent request with timestamp {self.clock}")
-        return self.clock
+    def request_resource(self, holders, initiator):
+        if not holders:
+            print(f"Process {self.pid} found no holders.")
+            return False
+        for h in holders:
+            probe = [initiator, self.pid, h.pid]
+            print(f"{self.pid} → sending probe {probe} to {h.pid}")
+            if h.receive_probe(probe):
+                print(f"Deadlock detected by process {initiator}!")
+                return True
+        return False
 
-    def receive_request(self, timestamp):
-        self.clock = max(self.clock, timestamp) + 1
-        print(f"[Process {self.process_id}] Received request (timestamp {timestamp}) → Updated clock to {self.clock}")
+    def receive_probe(self, probe):
+        initiator, sender, receiver = probe
+        print(f"{self.pid} ← received probe {probe}")
+        if self.pid == initiator:
+            print(f"Cycle found at {self.pid} → DEADLOCK!")
+            return True
+        if not self.waiting_for:
+            print(f"{self.pid} waits for no one. Ignoring.")
+            return False
+        for nxt in self.waiting_for:
+            new_probe = [initiator, self.pid, nxt.pid]
+            print(f"{self.pid} → forwarding probe {new_probe} to {nxt.pid}")
+            if nxt.receive_probe(new_probe):
+                return True
+        return False
 
-    def internal_event(self):
-        self.clock += 1
-        print(f"[Process {self.process_id}] Internal event → Timestamp updated to {self.clock}")
-
-def get_process(processes, pid):
-    if pid not in processes:
-        processes[pid] = LamportClock(pid)
-    return processes[pid]
-
-def simulate_with_input():
-    processes = {}
-    sent_messages = {}  # Store messages by name
-
-    print("\n--- Lamport Clock Simulation (User Input) ---\n")
-    print("Commands:")
-    print("  internal <pid>")
-    print("  send <sender_pid> <message_name>")
-    print("  receive <receiver_pid> <sender_pid> <message_name>")
-    print("  show")
-    print("  exit\n")
+def build_graph():
+    n = int(input("Number of processes: "))
+    processes = {i: Process(i) for i in range(1, n + 1)}
+    
+    print("Enter dependencies (waiting_for), e.g., '1 2' means P1 waits for P2.")
+    print("Type 'done' when finished.\n")
 
     while True:
-        command = input("Enter command: ").strip().split()
-
-        if not command:
-            continue
-
-        action = command[0].lower()
-
-        if action == "internal" and len(command) == 2:
-            pid = int(command[1])
-            proc = get_process(processes, pid)
-            proc.internal_event()
-
-        elif action == "send" and len(command) == 3:
-            pid = int(command[1])
-            msg_name = command[2]
-            proc = get_process(processes, pid)
-            sent_messages[msg_name] = proc.send_request()
-
-        elif action == "receive" and len(command) == 4:
-            receiver_pid = int(command[1])
-            sender_pid = int(command[2])
-            msg_name = command[3]
-
-            if msg_name not in sent_messages:
-                print(f"Error: Message '{msg_name}' not found.")
-                continue
-
-            proc = get_process(processes, receiver_pid)
-            proc.receive_request(sent_messages[msg_name])
-
-        elif action == "show":
-            for pid in sorted(processes):
-                print(f"Process {pid}: Clock = {processes[pid].clock}")
-
-        elif action == "exit":
-            print("\n--- Simulation Ended ---")
+        inp = input(">> ")
+        if inp == "done":
             break
+        try:
+            p1, p2 = map(int, inp.split())
+            processes[p1].waiting_for.append(processes[p2])
+        except:
+            print("Invalid input. Try again.")
 
+    return processes
+
+def run_detection():
+    processes = build_graph()
+    start = int(input("\nEnter initiator process ID: "))
+    if start in processes:
+        if processes[start].request_resource(processes[start].waiting_for, start):
+            print("Deadlock confirmed.")
         else:
-            print("Invalid command. Try again.")
+            print("No deadlock detected.")
+    else:
+        print("Invalid process ID.")
 
 if __name__ == "__main__":
-    simulate_with_input()
-
+    run_detection()
 
 # output
-# PS C:\Users\HP\Desktop\dc\exp4> python lamports-user.py
+# PS C:\Users\HP\Desktop\dc\exp7> python deadlock-user.py
+# Number of processes: 4
+# Enter dependencies (waiting_for), e.g., '1 2' means P1 waits for P2.
+# Type 'done' when finished.
 
-# --- Lamport Clock Simulation (User Input) ---
+# >> 1 2
+# >> 2 3
+# >> 3 4
+# >> 4 1
+# >> done
 
-# Commands:
-#   internal <pid>
-#   send <sender_pid> <message_name>
-#   receive <receiver_pid> <sender_pid> <message_name>
-#   show
-#   exit
-
-# Enter command: internal 1
-# [Process 1] Internal event → Timestamp updated to 1
-# Enter command: send 1 msgA
-# [Process 1] Sent request with timestamp 2
-# Enter command: internal 2
-# [Process 2] Internal event → Timestamp updated to 1
-# Enter command: receive 2 1 msgA
-# [Process 2] Received request (timestamp 2) → Updated clock to 3
-# Enter command: send 2 msgB
-# [Process 2] Sent request with timestamp 4
-# Enter command: receive 3 1 msgA
-# [Process 3] Received request (timestamp 2) → Updated clock to 3
-# Enter command: receive 3 2 msgB
-# [Process 3] Received request (timestamp 4) → Updated clock to 5
-# Enter command: show
-# Process 1: Clock = 2
-# Process 2: Clock = 4
-# Process 3: Clock = 5
-# Enter command: exit
-
-# --- Simulation Ended ---
+# Enter initiator process ID: 1
+# 1 → sending probe [1, 1, 2] to 2
+# 2 ← received probe [1, 1, 2]
+# 2 → forwarding probe [1, 2, 3] to 3
+# 3 ← received probe [1, 2, 3]
+# 3 → forwarding probe [1, 3, 4] to 4
+# 4 ← received probe [1, 3, 4]
+# 4 → forwarding probe [1, 4, 1] to 1
+# 1 ← received probe [1, 4, 1]
+# Cycle found at 1 → DEADLOCK!
+# Deadlock detected by process 1!
+# Deadlock confirmed.
